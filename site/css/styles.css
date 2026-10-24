@@ -97,6 +97,10 @@ address { font-style: normal; }
 .nav { display: flex; align-items: center; justify-content: space-between; height: var(--nav-h); gap: 24px; }
 .nav__logo { display: block; flex: none; width: 44px; height: 44px; padding: 2px; border-radius: 50%; }
 .nav__logo img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+@media (min-width: 900px) {
+  .nav__logo { width: 60px; height: 60px; }
+  .nav__logo img { width: 56px; height: 56px; }
+}
 .nav__links { display: flex; gap: 40px; }
 .nav__links a {
   position: relative; display: inline-flex; align-items: center; min-height: 44px;
