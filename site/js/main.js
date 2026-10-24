@@ -28,30 +28,63 @@
   }, { passive: true });
   onScroll();
 
-  /* Product cards: Buy Now links + demo cart */
+  /* Products: Buy Now links + demo cart (count kept per browser across pages) */
   const countEl = document.querySelector('[data-cart-count]');
   const cartEl = document.querySelector('.cart');
   const toast = document.querySelector('.toast');
+  const CART_KEY = 'gf-cart-count';
   let count = 0;
   let toastTimer;
 
+  try { count = parseInt(localStorage.getItem(CART_KEY), 10) || 0; } catch (err) { /* storage unavailable */ }
+  const showCount = () => {
+    countEl.textContent = count;
+    cartEl.setAttribute('aria-label', `Cart items: ${count}`);
+  };
+  showCount();
+
+  const orderText = (name, kind, qty) => {
+    if (kind === 'stem') return `Hi! I'd like to order ${qty} ${name} stem${qty > 1 ? 's' : ''}.`;
+    return qty > 1 ? `Hi! I'd like to order ${qty} ${name} bouquets.` : `Hi! I'd like to order the ${name} bouquet.`;
+  };
+  const buyHref = (name, kind, qty) => `${WA}?text=${encodeURIComponent(orderText(name, kind, qty))}`;
+
+  const addToCart = (name, qty) => {
+    count += qty;
+    try { localStorage.setItem(CART_KEY, String(count)); } catch (err) { /* storage unavailable */ }
+    showCount();
+    countEl.classList.remove('is-pop');
+    void countEl.offsetWidth;
+    countEl.classList.add('is-pop');
+    toast.textContent = qty > 1 ? `Added ${qty} × ${name}` : `Added ${name}`;
+    toast.classList.add('is-visible');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('is-visible'), 2200);
+  };
+
   document.querySelectorAll('.card').forEach((card) => {
-    const name = card.dataset.name;
-    const what = card.dataset.kind === 'stem' ? `${name} stems` : `${name} bouquet`;
-    card.querySelector('[data-buy]').href = `${WA}?text=${encodeURIComponent(`Hi! I'd like to order the ${what}.`)}`;
-    card.querySelector('[data-add]').addEventListener('click', () => {
-      count += 1;
-      countEl.textContent = count;
-      cartEl.setAttribute('aria-label', `Cart items: ${count}`);
-      countEl.classList.remove('is-pop');
-      void countEl.offsetWidth;
-      countEl.classList.add('is-pop');
-      toast.textContent = `Added ${name}`;
-      toast.classList.add('is-visible');
-      clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => toast.classList.remove('is-visible'), 2200);
-    });
+    const { name, kind } = card.dataset;
+    card.querySelector('[data-buy]').href = buyHref(name, kind, 1);
+    card.querySelector('[data-add]').addEventListener('click', () => addToCart(name, 1));
   });
+
+  /* Product page: quantity stepper */
+  const product = document.querySelector('.product');
+  if (product) {
+    const { name, kind } = product.dataset;
+    const input = product.querySelector('.qty__input');
+    const buy = product.querySelector('[data-buy]');
+    const qty = () => Math.min(99, Math.max(1, parseInt(input.value, 10) || 1));
+    const sync = () => { buy.href = buyHref(name, kind, qty()); };
+    product.querySelectorAll('[data-qty]').forEach((btn) => btn.addEventListener('click', () => {
+      input.value = Math.min(99, Math.max(1, qty() + Number(btn.dataset.qty)));
+      sync();
+    }));
+    input.addEventListener('input', sync);
+    input.addEventListener('change', () => { input.value = qty(); sync(); });
+    product.querySelector('[data-add]').addEventListener('click', () => addToCart(name, qty()));
+    sync();
+  }
 
   document.querySelectorAll('[data-placeholder]').forEach((a) => a.addEventListener('click', (e) => e.preventDefault()));
 
@@ -75,6 +108,7 @@
 
   /* Testimonials coverflow */
   const carousel = document.querySelector('.carousel');
+  if (!carousel) return;
   const track = carousel.querySelector('.carousel__track');
   const slides = [...track.children];
   const mobile = window.matchMedia('(max-width: 767px)');
